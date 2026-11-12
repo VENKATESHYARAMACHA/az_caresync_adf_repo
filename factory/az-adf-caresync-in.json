@@ -1,0 +1,15 @@
+{
+	"name": "az-adf-caresync-in",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "southeastasia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "963d1a12-13f8-4f94-a0de-6dd605cf48e2",
+		"tenantId": "2f8c295a-a3ae-488f-bd58-30f3750ce5ab"
+	}
+}
