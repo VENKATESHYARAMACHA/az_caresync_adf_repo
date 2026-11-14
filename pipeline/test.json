@@ -50,7 +50,7 @@
 						"referenceName": "DS_Parquet",
 						"type": "DatasetReference",
 						"parameters": {
-							"folder": "test"
+							"container": "test"
 						}
 					}
 				]
