@@ -1,0 +1,202 @@
+{
+	"name": "PL-Source-Silver-Inner",
+	"properties": {
+		"activities": [
+			{
+				"name": "Read table detaills",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT * FROM ctrl.table_config WHERE is_active = 1 AND source_system = 'neon_postgres'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_AzureSqlTable",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Set time stamp",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "date",
+					"value": {
+						"value": "@formatDateTime(utcNow(),'yyyy-MM-dd_hh:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Source to raw",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Read table detaills",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set time stamp",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "PostgreSqlV2Source",
+						"query": {
+							"value": "SELECT * FROM \r\n      @{activity('Read table detaills').output.firstRow.source_schema_name}.\r\n      @{activity('Read table detaills').output.firstRow.source_table_name}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_PostgreSqlTable",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_Parquet",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "raw",
+							"folder_structure": {
+								"value": "@concat(\n    activity('Read table detaills').output.firstRow.source_system,\n    '/',\n    activity('Read table detaills').output.firstRow.source_table_name,\n    '/',\n    variables('date')\n)",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "raw_to_bronze",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Source to raw",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/az-caresync-adb-repo/raw_to_bronze",
+					"baseParameters": {
+						"rawdata_timestamp": {
+							"value": "@variables('date')",
+							"type": "Expression"
+						},
+						"source_system": {
+							"value": "@activity('Read table detaills').output.firstRow.source_system",
+							"type": "Expression"
+						},
+						"table_name": {
+							"value": "@activity('Read table detaills').output.firstRow.source_table_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "bronze_to_silver",
+				"type": "DatabricksNotebook",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "raw_to_bronze",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/az-caresync-adb-repo/bronze_to_silver"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"value": {
+				"type": "String"
+			},
+			"date": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}
