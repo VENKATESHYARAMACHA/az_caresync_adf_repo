@@ -47,13 +47,65 @@
 					},
 					"activities": [
 						{
-							"name": "Source to Raw",
-							"type": "Copy",
+							"name": "Source to Silver",
+							"type": "ExecutePipeline",
 							"dependsOn": [
 								{
-									"activity": "Date",
+									"activity": "Insert in Progress status",
 									"dependencyConditions": [
 										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL-Source-Silver-Inner",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "Insert in Progress status",
+							"type": "Script",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "LS_AzureSqlDatabase",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": {
+											"value": "INSERT INTO ctrl.audit_log (adf_run_id,table_id,stage,status,start_time) \n            values('a1',@{item().table_id},'source_to_silver','In_progress',sysutcdatetime())",
+											"type": "Expression"
+										}
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "update failed status",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Source to Silver",
+									"dependencyConditions": [
+										"Failed"
 									]
 								}
 							],
@@ -65,69 +117,21 @@
 								"secureInput": false
 							},
 							"userProperties": [],
-							"typeProperties": {
-								"source": {
-									"type": "PostgreSqlV2Source",
-									"query": {
-										"value": "select * from @{item().source_schema_name}.\n              @{item().source_table_name}",
-										"type": "Expression"
-									},
-									"queryTimeout": "02:00:00"
-								},
-								"sink": {
-									"type": "ParquetSink",
-									"storeSettings": {
-										"type": "AzureBlobFSWriteSettings"
-									},
-									"formatSettings": {
-										"type": "ParquetWriteSettings"
-									}
-								},
-								"enableStaging": false,
-								"translator": {
-									"type": "TabularTranslator",
-									"typeConversion": true,
-									"typeConversionSettings": {
-										"allowDataTruncation": true,
-										"treatBooleanAsNumber": false
-									}
-								}
+							"linkedServiceName": {
+								"referenceName": "LS_AzureSqlDatabase",
+								"type": "LinkedServiceReference"
 							},
-							"inputs": [
-								{
-									"referenceName": "DS_PostgreSqlTable",
-									"type": "DatasetReference"
-								}
-							],
-							"outputs": [
-								{
-									"referenceName": "DS_Parquet",
-									"type": "DatasetReference",
-									"parameters": {
-										"container": "raw",
-										"folder_structure": {
-											"value": "@concat(\n    item().source_system,\n    '/',\n    item().source_table_name,\n    '/',\n    variables('date')\n)",
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": {
+											"value": "INSERT INTO ctrl.audit_log (adf_run_id,table_id,stage,status,start_time) \n            values('a1',@{item().table_id},'source_to_silver','failed',sysutcdatetime())",
 											"type": "Expression"
 										}
 									}
-								}
-							]
-						},
-						{
-							"name": "Date",
-							"type": "SetVariable",
-							"dependsOn": [],
-							"policy": {
-								"secureOutput": false,
-								"secureInput": false
-							},
-							"userProperties": [],
-							"typeProperties": {
-								"variableName": "date",
-								"value": {
-									"value": "@formatDateTime(utcNow(),'yyyy-MM-dd_hh:mm:ss')",
-									"type": "Expression"
-								}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
 							}
 						}
 					]
