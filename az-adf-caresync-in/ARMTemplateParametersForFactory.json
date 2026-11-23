@@ -14,6 +14,15 @@
 		"LS_AzureKeyVault_properties_typeProperties_baseUrl": {
 			"value": "https://az-kv-caresync-in.vault.azure.net/"
 		},
+		"LS_AzureSqlDatabase_properties_typeProperties_server": {
+			"value": "az-caresync-sql-server.database.windows.net"
+		},
+		"LS_AzureSqlDatabase_properties_typeProperties_database": {
+			"value": "az-caresync-sql-db"
+		},
+		"LS_AzureSqlDatabase_properties_typeProperties_userName": {
+			"value": "venkateshyaramacha"
+		},
 		"LS_PostgreSql_properties_typeProperties_server": {
 			"value": "ep-mute-dream-a1weceue-pooler.ap-southeast-1.aws.neon.tech"
 		},
