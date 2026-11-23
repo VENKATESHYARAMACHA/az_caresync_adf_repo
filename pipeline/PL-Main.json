@@ -66,7 +66,17 @@
 									"referenceName": "PL-Source-Silver-Inner",
 									"type": "PipelineReference"
 								},
-								"waitOnCompletion": true
+								"waitOnCompletion": true,
+								"parameters": {
+									"table_id": {
+										"value": "@item().table_id",
+										"type": "Expression"
+									},
+									"adf_run_id": {
+										"value": "@pipeline().parameters.adf_run_id",
+										"type": "Expression"
+									}
+								}
 							}
 						},
 						{
@@ -90,7 +100,7 @@
 									{
 										"type": "Query",
 										"text": {
-											"value": "INSERT INTO ctrl.audit_log (adf_run_id,table_id,stage,status,start_time) \n            values('a1',@{item().table_id},'source_to_silver','In_progress',sysutcdatetime())",
+											"value": "INSERT INTO ctrl.audit_log (adf_run_id,table_id,stage,status,start_time) \n            values(@{pipeline().parameters.adf_run_id},@{item().table_id},'source_to_silver','In_progress',sysutcdatetime())",
 											"type": "Expression"
 										}
 									}
@@ -126,7 +136,7 @@
 									{
 										"type": "Query",
 										"text": {
-											"value": "INSERT INTO ctrl.audit_log (adf_run_id,table_id,stage,status,start_time) \n            values('a1',@{item().table_id},'source_to_silver','failed',sysutcdatetime())",
+											"value": "UPDATE ctrl.audit_log\nSET status = 'FAILED', end_time =sysutcdatetime()\nWHERE adf_run_id = @{pipeline().parameters.adf_run_id} and table_id = @{item().table_id};",
 											"type": "Expression"
 										}
 									}
@@ -138,6 +148,12 @@
 				}
 			}
 		],
+		"parameters": {
+			"adf_run_id": {
+				"type": "string",
+				"defaultValue": "a2"
+			}
+		},
 		"variables": {
 			"value": {
 				"type": "String"
